@@ -187,7 +187,6 @@ public class MainWindow : Window, IDisposable
             }
         }
 
-        ImGui.End();
     }
 
 
