@@ -78,24 +78,33 @@ public class MainWindow : Window, IDisposable
     }
 
     private void OnChatMessage(XivChatType type, uint senderId, ref SeString sender, ref SeString message, ref bool isHandled)
-{
-
-    if (!isListening || excludedChatTypes.Contains(type))
-        return;
-
-    var messageText = message.TextValue;
-
-    var match = Regex.Match(messageText, @"(.+?)掷出了(\d+)点！");
-    if (match.Success)
     {
-        string name = match.Groups[1].Value;
-        int roll = int.Parse(match.Groups[2].Value);
-        if (!rollResults.ContainsKey(name))
+        if (!isListening || excludedChatTypes.Contains(type))
+            return;
+
+        var messageText = message.TextValue;
+
+        var regexPattern = new Regex(
+            @"(?:ダイス！ (.+?)は、(\d+)を出した！|Random! (.+?) rolls a (\d+)(?!.*out of)|(.+?)掷出了(\d+)点！(?!.*（最大\d+）)|(.+?) würfelt eine (\d+)(?!.*-seitigen)|(.+?) jette les dés et obtient (\d+)(?!.*Lancer d'un dé))"
+        );
+        var match = regexPattern.Match(messageText);
+
+        if (match.Success)
         {
-            rollResults[name] = roll;
+
+            string name = match.Groups[1].Success ? match.Groups[1].Value : match.Groups[3].Success ? match.Groups[3].Value : match.Groups[5].Success ? match.Groups[5].Value : match.Groups[7].Success ? match.Groups[7].Value : match.Groups[9].Value;
+            int roll = int.Parse(match.Groups[2].Success ? match.Groups[2].Value : match.Groups[4].Success ? match.Groups[4].Value : match.Groups[6].Success ? match.Groups[6].Value : match.Groups[8].Success ? match.Groups[8].Value : match.Groups[10].Value);
+
+            if (!rollResults.ContainsKey(name))
+            {
+                rollResults[name] = roll;
+            }
         }
     }
-}
+
+
+
+
 
 
 
@@ -104,7 +113,6 @@ public class MainWindow : Window, IDisposable
     public void Dispose()
     {
         Service.ChatGui.ChatMessage -= OnChatMessage;
-
     }
 
 
@@ -138,7 +146,6 @@ public class MainWindow : Window, IDisposable
             ImGui.InputInt("指定数值", ref specifiedNumber);
         }
 
-        // 找出要突出显示的结果
         string highlightName = null;
         int highlightRoll = (selectedOption == 1) ? int.MaxValue : int.MinValue;
         foreach (var result in rollResults)
